@@ -532,8 +532,8 @@ class QuestionViewController : UIViewController, WebserviceClassDelegate {
             self.questionColletion = nil
             self.questionColletion = QuestionCollectionModel()
             let questionDictionary = content["questions"] as! NSDictionary
-            let preparedArray = questionDictionary["prepared_questions"] as! NSArray
-            let customArray = questionDictionary["custom_questions"] as! NSArray
+            let preparedArray = questionDictionary["prepared"] as! NSArray
+            let customArray = questionDictionary["custom"] as! NSArray
             
             if preparedArray.count != 0 {
                 
@@ -627,7 +627,7 @@ class QuestionViewController : UIViewController, WebserviceClassDelegate {
 }
 
 // MARK: - Challenge Setup
-class ChallengeSetupViewController : UIViewController, QuestionSelectionViewControllerDelegate, FriendSelectionViewControllerDelegate {
+class ChallengeSetupViewController : UIViewController, QuestionSelectionViewControllerDelegate, FriendSelectionViewControllerDelegate, WebserviceClassDelegate {
     
     // MARK: Properties
     @IBOutlet weak var viewHolder: UIView!
@@ -687,6 +687,7 @@ class ChallengeSetupViewController : UIViewController, QuestionSelectionViewCont
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
         
+        
     }
     
     override func viewDidAppear(animated: Bool) {
@@ -706,29 +707,67 @@ class ChallengeSetupViewController : UIViewController, QuestionSelectionViewCont
     
     @IBAction func questionButtonClicked(sender: UIButton) {
         
-//        self.performSegueWithIdentifier("goToQuestionSelection", sender: self)
+        self.performSegueWithIdentifier("goToQuestionSelection", sender: self)
         sender.selected = !sender.selected
-        if sender.selected {
-            self.checkBoxQuestion.image = UIImage(named: "check-box")
-        }else {
-            self.checkBoxQuestion.image = UIImage(named: "box")
-        }
+//        if sender.selected {
+//            self.checkBoxQuestion.image = UIImage(named: "check-box")
+//        }else {
+//            self.checkBoxQuestion.image = UIImage(named: "box")
+//        }
         
         
     }
     @IBAction func friendButtonClicked(sender: UIButton) {
         
-//        self.performSegueWithIdentifier("goToFriend", sender: self)
+        self.performSegueWithIdentifier("goToFriend", sender: self)
         sender.selected = !sender.selected
-        if sender.selected {
-            self.checkBoxFriends.image = UIImage(named: "check-box")
-        }else {
-            self.checkBoxFriends.image = UIImage(named: "box")
-        }
         
+
     }
     
     @IBAction func sendButtonClicked(sender: UIButton) {
+        
+        if self.questions!.collection.count == 0 || self.friendsCollection!.count == 0 {
+            // Select Friends and Questions
+            return
+        }
+        
+        let dictionaryParameter = NSMutableDictionary()
+        let dictionaryStats = NSMutableDictionary()
+        let arrayReceivers = NSMutableArray()
+        let arrayQuestions = NSMutableArray()
+        
+        
+        
+        for friendsOjbect in self.friendsCollection! {
+            
+            let friendModel = friendsOjbect as! UserModel
+            let dictionaryFriend = NSMutableDictionary()
+            dictionaryFriend.setObject(friendModel.identifier, forKey: "rid")
+            arrayReceivers.addObject(dictionaryFriend)
+        
+            for questionObject in self.questions!.collection {
+                
+                let questionModel = questionObject as! QuestionModel
+                let dictionaryQuestion = NSMutableDictionary()
+                dictionaryQuestion.setObject(questionModel.identifier, forKey: "qid")
+                dictionaryQuestion.setObject(questionModel.type, forKey: "type")
+                arrayQuestions.addObject(dictionaryQuestion)
+            }
+            
+        }
+        dictionaryStats.setObject(arrayReceivers, forKey: "receivers")
+        dictionaryStats.setObject(self.currentUser!.identifier, forKey: "sender")
+        dictionaryParameter.setObject(arrayQuestions, forKey: "questions")
+        dictionaryParameter.setObject(dictionaryStats, forKey: "stats")
+        
+        ///api/ios/stats-game/
+        let webservice = WebserviceClass()
+        webservice.link = "http://stupideasygames.com/friendapp/api/ios/stats-game"
+        webservice.identifier = "challenge"
+        webservice.delegate = self
+        webservice.sendPostWithParameter(dictionaryParameter)
+        
         
     }
     
@@ -738,12 +777,33 @@ class ChallengeSetupViewController : UIViewController, QuestionSelectionViewCont
         self.questions!.collection.removeAllObjects()
         self.questions!.collection.addObjectsFromArray(selected as [AnyObject])
         
+        self.checkBoxQuestion.image = UIImage(named: "box")
+        if selected.count != 0 {
+            self.checkBoxQuestion.image = UIImage(named: "check-box")
+        }
+        
     }
     
     func friendSelected(friends: NSMutableArray) {
         
         self.friendsCollection!.removeAllObjects()
         self.friendsCollection!.addObjectsFromArray(friends as [AnyObject])
+        
+        self.checkBoxFriends.image = UIImage(named: "box")
+        if friends.count != 0 {
+            self.checkBoxFriends.image = UIImage(named: "check-box")
+        }
+        
+
+    }
+    // Webservice Delegate
+    func webserviceDidReceiveData(webservice: WebserviceClass, content: NSDictionary) {
+        
+        self.friendsCollection!.removeAllObjects()
+        self.questions!.collection.removeAllObjects()
+        self.checkBoxFriends.image = UIImage(named: "box")
+        self.checkBoxQuestion.image = UIImage(named: "box")
+        
         
     }
     
@@ -754,7 +814,7 @@ class ChallengeSetupViewController : UIViewController, QuestionSelectionViewCont
             let controller = segue.destinationViewController as! QuestionSelectionViewController
             controller.delegate = self
             controller.currentUser = self.currentUser!
-            controller.questions = self.questions!
+            controller.questionColletion = self.questions!
             
             
         }else if segue.identifier! == "goToFriend"{

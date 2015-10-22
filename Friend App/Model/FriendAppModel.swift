@@ -7,10 +7,26 @@
 //
 
 import Foundation
+
+
+class AppModel {
+    
+    static let sharedInstance = AppModel()
+    
+    let user: UserModel! = UserModel()
+    let preparedQuestion: NSMutableArray! = NSMutableArray()
+    let customQuestion: NSMutableArray! = NSMutableArray()
+    
+    private init() {
+        
+    } //This prevents others from using the default '()' initializer for this class.
+}
+
 // MARK: - User Model
 class UserModel: NSObject {
     
     var identifier: String! = ""
+    var facebookID: NSString! = ""
     var firstName: String! = ""
     var lastName: String! = ""
     var email: String! = ""
@@ -54,4 +70,12 @@ class ChallengeResultModel: NSObject {
     
     var identifier: String! = ""
     var result: NSMutableArray! = NSMutableArray()
+}
+
+// MARK: Challenge Model
+class ChallengeModel: NSObject {
+    
+    var identifier: String! = ""
+    var questionSet: QuestionCollectionModel! = QuestionCollectionModel()
+    var friends: NSMutableArray! = NSMutableArray()
 }
