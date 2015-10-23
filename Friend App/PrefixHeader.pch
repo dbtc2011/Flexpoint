@@ -1,0 +1,29 @@
+//
+//  PrefixHeader.pch
+//  Friend App
+//
+//  Created by Paul Galasso on 10/22/15.
+//  Copyright © 2015 Mark Angeles. All rights reserved.
+//
+
+#ifndef PrefixHeader_pch
+#define PrefixHeader_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+
+// Webs service links
+#define kWebLink @"http://stupideasygames.com"
+#define kUsers @"/friendapp/api/ios/users/"
+#define kAddCustom @"/friendapp/api/ios/game-data/questions/custom"
+#define kPrepared @"/friendapp/api/ios/game-data/questions/prepared"
+#define kQuestions @"/friendapp/api/ios/questions/prepared"
+#define kFriends @"/friendapp/api/ios/game-data/list-of-friends/"
+#define kSendChallenge @"/friendapp/api/ios/stats-game"
+#define kFBAppLink @"https://fb.me/750184568442914"
+
+
+#endif /* PrefixHeader_pch */
+
+// friendapp/api/ios/questions/prepared

@@ -14,8 +14,12 @@ class AppModel {
     static let sharedInstance = AppModel()
     
     let user: UserModel! = UserModel()
+    let friends: NSMutableArray! = NSMutableArray()
     let preparedQuestion: NSMutableArray! = NSMutableArray()
     let customQuestion: NSMutableArray! = NSMutableArray()
+    let questions: NSMutableArray! = NSMutableArray()
+    let challengeSent: NSMutableArray! = NSMutableArray()
+    let challengeReceived: NSMutableArray! = NSMutableArray()
     
     private init() {
         
@@ -77,5 +81,5 @@ class ChallengeModel: NSObject {
     
     var identifier: String! = ""
     var questionSet: QuestionCollectionModel! = QuestionCollectionModel()
-    var friends: NSMutableArray! = NSMutableArray()
+    var friend: UserModel! = UserModel()
 }
