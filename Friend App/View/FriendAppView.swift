@@ -195,6 +195,7 @@ class ChallengeStatusView : UIView {
     
     // MARK: Properties
     var delegate: ChallengeStatusViewDelegate?
+    var user: UserModel?
     
     // MARK: Init
     override init(frame: CGRect) {
@@ -224,24 +225,26 @@ class ChallengeStatusView : UIView {
 //        imageBackground.layer.cornerRadius = 5
 //        imageBackground.tag = 13
 //        self.addSubview(imageBackground)
+        print(self.user!.imageLink)
         
-        
+//        let image = UIImage(data: NSData(contentsOfURL: NSURL(string: self.user!.imageLink)!)!)
         let imageProfile = UIImageView(frame: CGRectMake(10, 10, 50, 50))
         imageProfile.image = UIImage(named: "3")
+//        imageProfile.image = image
         imageProfile.alpha = 0.9
         self.addSubview(imageProfile)
         
-        let labelName = UILabel(frame: CGRectMake(10, CGRectGetMaxY(imageProfile.frame)+2, 50, 17))
-        labelName.text = "Mark"
+        let labelName = UILabel(frame: CGRectMake(10, CGRectGetMaxY(imageProfile.frame), 150, 17))
+        labelName.text = self.user!.firstName
         labelName.font = UIFont.systemFontOfSize(14)
         labelName.adjustsFontSizeToFitWidth = true
         labelName.textColor = UIColor(red: 65/255, green: 65/255, blue: 65/255, alpha: 1)
         labelName.textColor = UIColor.whiteColor()
-        labelName.textAlignment = NSTextAlignment.Center
+        labelName.textAlignment = NSTextAlignment.Left
         self.addSubview(labelName)
         
         let labelStatus = UILabel(frame: CGRectMake(self.frame.size.width-80, 0, 80, self.frame.size.height))
-        labelStatus.text = "Done"
+        labelStatus.text = "Waiting"
         labelStatus.textColor = UIColor(red: 65/255, green: 65/255, blue: 65/255, alpha: 1)
         labelStatus.textColor = UIColor.whiteColor()
         labelStatus.textAlignment = NSTextAlignment.Center
@@ -650,7 +653,7 @@ class LadderBoardView : UIView {
 // MARK: - Notification View
 protocol NotificationViewDelegate {
     
-    func notificationSelected (selected : QuestionCollectionModel)
+    func notificationSelected (selected : ChallengeModel)
     
 }
 class NotificationView : UIView {
@@ -694,17 +697,16 @@ class NotificationView : UIView {
         
         var yLocation = 0 as CGFloat
         
-        for (var count = 0; count < self.arrayNotification.count; count++) {
+        for (var count = 0; count < AppModel.sharedInstance.challengeReceived.count; count++) {
             
             
-            let challenge = self.arrayNotification[count] as! QuestionCollectionModel
+            let challenge = AppModel.sharedInstance.challengeReceived[count] as! ChallengeModel
             
             let buttonBack = UIButton(type: UIButtonType.Custom)
             buttonBack.frame = CGRectMake(0, yLocation, self.scrollNotification.frame.size.width, 50)
-            buttonBack.setTitle(self.arrayNotification[count] as? String, forState: UIControlState.Normal)
             buttonBack.layer.borderWidth = 1.0
             buttonBack.addTarget(self, action: "selectedChallenge:", forControlEvents: UIControlEvents.TouchUpInside)
-            buttonBack.setTitle("\(challenge.identifier) has Challenged you!", forState: UIControlState.Normal)
+            buttonBack.setTitle("\(challenge.friend.firstName) has Challenged you!", forState: UIControlState.Normal)
             buttonBack.tag = count+1
             buttonBack.layer.borderColor = UIColor(red: 255/255, green: 255/255, blue: 255/255, alpha: 0.5).CGColor
             self.scrollNotification.addSubview(buttonBack)
@@ -742,7 +744,7 @@ class NotificationView : UIView {
     // MARK: Button Action
     func selectedChallenge(sender: UIButton) {
         
-        let challenge = self.arrayNotification[sender.tag - 1] as! QuestionCollectionModel
+        let challenge = AppModel.sharedInstance.challengeReceived[sender.tag - 1] as! ChallengeModel
         self.delegate?.notificationSelected(challenge)
         
     }

@@ -80,6 +80,7 @@ class ChallengeResultModel: NSObject {
 class ChallengeModel: NSObject {
     
     var identifier: String! = ""
+    var type: String! = ""
     var questionSet: QuestionCollectionModel! = QuestionCollectionModel()
     var friend: UserModel! = UserModel()
 }

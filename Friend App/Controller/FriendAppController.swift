@@ -31,7 +31,7 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
         self.view.addSubview(fbLogin)
         
         
-//        self.buttonLoginEmail.hidden = true
+        self.buttonLoginEmail.hidden = true
         self.buttonLoginFacebook.hidden = true
         self.buttonSignup.hidden = true
         
@@ -133,6 +133,18 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
         
     }
     
+    func getFriends() {
+        
+        let dictionaryParam = NSMutableDictionary()
+        dictionaryParam.setObject(AppModel.sharedInstance.user.identifier, forKey: "uid")
+        let webservice = WebserviceClass()
+        webservice.link = kWebLink + kFriends
+        webservice.identifier = "getFriends"
+        webservice.delegate = self
+        webservice.getMethod(dictionaryParam)
+        
+    }
+    
     // MARK: For Testing
     func appInviteDialog(appInviteDialog: FBSDKAppInviteDialog!, didCompleteWithResults results: [NSObject : AnyObject]!) {
         
@@ -170,9 +182,10 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
             let preparedArray = questionDictionary["prepared"] as! NSArray
             let customArray = questionDictionary["custom"] as! NSArray
             let friendList = content["list_of_friends"] as! NSArray
-            let challengeDictionary = content["challenges"] as! NSDictionary
-            let outgoingArray = challengeDictionary["outgoing"] as! NSArray
-            let incomingArray = challengeDictionary["incoming"] as! NSArray
+            
+            AppModel.sharedInstance.friends.removeAllObjects()
+            AppModel.sharedInstance.preparedQuestion.removeAllObjects()
+            AppModel.sharedInstance.customQuestion.removeAllObjects()
             
             for objectContent in friendList {
                 let dictionaryFriend = objectContent as! NSDictionary
@@ -187,6 +200,7 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
                 let questionModelRepresentation = QuestionModel()
                 questionModelRepresentation.identifier = dictionaryPrepared["qid"] as! String
                 questionModelRepresentation.answer = dictionaryPrepared["answer"] as! String
+                print("FANSWER !!! \(questionModelRepresentation.answer)")
                 questionModelRepresentation.type = "prepared"
                 AppModel.sharedInstance.preparedQuestion.addObject(questionModelRepresentation)
                 
@@ -204,20 +218,6 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
                 
             }
             
-            for objectContent in incomingArray {
-                let dictionaryIn = objectContent as! NSDictionary
-                let questionModelRepresentation = ChallengeModel()
-                questionModelRepresentation.identifier = dictionaryIn["sid"] as! String
-                AppModel.sharedInstance.challengeReceived.addObject(questionModelRepresentation)
-                
-            }
-            
-            for objectContent in outgoingArray {
-                let dictionaryOut = objectContent as! NSDictionary
-                let questionModelRepresentation = ChallengeModel()
-                questionModelRepresentation.identifier = dictionaryOut["sid"] as! String
-                AppModel.sharedInstance.challengeSent.addObject(questionModelRepresentation)
-            }
         
             if (FBSDKAccessToken.currentAccessToken() != nil) {
                 
@@ -251,7 +251,6 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
                     }
             
                     dictionaryParameter.setObject(arrayUsers, forKey: "friends")
-                    print(result)
                     let webservice = WebserviceClass()
                     webservice.link = "\(kWebLink)\(kUsers)\(AppModel.sharedInstance.user.identifier)"
                     webservice.identifier = "postData"
@@ -267,54 +266,47 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
         
         }else if webservice.identifier == "getPrepared" {
             let preparedArray = content["data"] as! NSArray
-            let arrayPrepared = NSMutableArray()
             
-            for objectContet in preparedArray {
+            if AppModel.sharedInstance.questions.count == 0 {
                 
-                let dictionaryContent = objectContet as! NSDictionary
-                let question = QuestionModel()
-                question.question = dictionaryContent["question"] as! String
-                question.identifier = dictionaryContent["_id"] as! String
-                arrayPrepared.addObject(question)
-                
-            }
-            
-            if AppModel.sharedInstance.preparedQuestion == 0 {
-//                let mapViewControllerObejct = self.storyboard?.instantiateViewControllerWithIdentifier("SetupVC") as? SetupViewController
-//                self.navigationController?.pushViewController(mapViewControllerObejct!, animated: true)
-                
-                self.performSegueWithIdentifier("goToInitialSetup", sender: arrayPrepared)
-                return
-            }
-            
-            for model in arrayPrepared {
-                
-                let questionModel = model as! QuestionModel
-                let predicate = NSPredicate(format: "self.identifier == '\(questionModel.identifier)'")
-                let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
-                if arrayFilter.count != 0 {
-                    let updateModel = arrayFilter[0] as! QuestionModel
-                    let index = AppModel.sharedInstance.preparedQuestion.indexOfObject(updateModel)
-                    let oldModel = AppModel.sharedInstance.preparedQuestion[index] as! QuestionModel
-                    oldModel.question = updateModel.question
-                    oldModel.options.addObjectsFromArray(updateModel.options as [AnyObject])
-                    AppModel.sharedInstance.preparedQuestion.replaceObjectAtIndex(index, withObject: oldModel)
+                for objectContet in preparedArray {
+                    let dictionaryContent = objectContet as! NSDictionary
+                    let question = QuestionModel()
+                    question.question = dictionaryContent["question"] as! String
+                    question.identifier = dictionaryContent["_id"] as! String
+                    question.options.addObjectsFromArray(dictionaryContent["options"] as! NSArray as [AnyObject])
+                    AppModel.sharedInstance.questions.addObject(question)
                 }
                 
             }
             
-            self.performSegueWithIdentifier("goToHomeTab", sender: self)
-            /*
-            if ([FBSDKAccessToken currentAccessToken]) {
-                [[[FBSDKGraphRequest alloc] initWithGraphPath:@"me" parameters:nil]
-                startWithCompletionHandler:^(FBSDKGraphRequestConnection *connection, id result, NSError *error) {
-                    if (!error) {
-                        NSLog(@"fetched user:%@", result);
+            
+            if AppModel.sharedInstance.preparedQuestion.count > 0 {
+                
+//                let mapViewControllerObejct = self.storyboard?.instantiateViewControllerWithIdentifier("SetupVC") as? SetupViewController
+//                self.navigationController?.pushViewController(mapViewControllerObejct!, animated: true)
+                
+                for model in AppModel.sharedInstance.questions {
+                    
+                    let questionModel = model as! QuestionModel
+                    let predicate = NSPredicate(format: "self.identifier == '\(questionModel.identifier)'")
+                    let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
+                    if arrayFilter.count != 0 {
+                        let updateModel = arrayFilter[0] as! QuestionModel
+                        let index = AppModel.sharedInstance.preparedQuestion.indexOfObject(updateModel)
+                        updateModel.question = questionModel.question
+                        updateModel.options.addObjectsFromArray(questionModel.options as [AnyObject])
+                        print("Fucking Answer = \(updateModel.answer)")
+                        
+                        AppModel.sharedInstance.preparedQuestion.replaceObjectAtIndex(index, withObject: updateModel)
                     }
-                }];
-            }*/
-            
-            
+                    
+                }
+                
+                
+            }
+            self.getFriends()
+
         }else if webservice.identifier == "postData" {
             
             let arrayemporaryUsers = NSMutableArray()
@@ -327,8 +319,7 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
                 arrayemporaryUsers.addObject(dictionaryOfFriends["fbid"] as! String)
                 
             }
-            
-            
+
             let dictionaryParameter = NSMutableDictionary()
             let webservice = WebserviceClass()
             webservice.link = "\(kWebLink)\(kUsers)\(AppModel.sharedInstance.user.identifier)"
@@ -342,6 +333,40 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
             
             self.getQuestions()
             
+        }else if webservice.identifier == "getFriends" {
+            
+            let arrayContent = content["friends"] as! NSArray
+            
+            AppModel.sharedInstance.friends.removeAllObjects()
+            for objectContent in arrayContent {
+                
+                let dictionaryContent = objectContent as! NSDictionary
+                
+                let dictionaryUsername = dictionaryContent["username"] as! NSDictionary
+                
+                let dictionaryImage = dictionaryContent["image"] as! NSDictionary
+                
+                let dictionaryName = dictionaryContent["name"] as! NSDictionary
+                
+                let friendModel = UserModel()
+                friendModel.imageLink = dictionaryImage["original"] as! String
+                friendModel.firstName = dictionaryName["first"] as! String
+                friendModel.lastName = dictionaryName["last"] as! String
+                friendModel.identifier = dictionaryContent["_id"] as! String
+                friendModel.facebookID = dictionaryUsername["uid"] as! String
+                friendModel.email = dictionaryUsername["email"] as! String
+                friendModel.emailType = "facebook"
+                AppModel.sharedInstance.friends.addObject(friendModel)
+                
+            }
+            
+            if AppModel.sharedInstance.preparedQuestion.count == 0 {
+                
+                self.performSegueWithIdentifier("goToInitialSetup", sender: self)
+                return
+            }
+            
+            self.performSegueWithIdentifier("goToHomeTab", sender: self)
         }
     }
     
@@ -1594,27 +1619,11 @@ class SetupViewController : UIViewController, UITableViewDelegate, UITableViewDa
         cell.labelTitle!.text = dictionaryContent["title"] as? String
         cell.labelContent!.text = dictionaryContent["content"] as? String
         cell.backgroundColor = UIColor.clearColor()
-    
-        print(cell.contentView.gestureRecognizers)
-        let gesture =  UIPanGestureRecognizer(target: self, action: "panning:")
-        cell.contentView.addGestureRecognizer(gesture)
-        print(cell.subviews)
         
         return cell
     }
     
-    func panning(sender: UIPanGestureRecognizer) {
-        let point = sender.translationInView(self.view)
-        sender.view!.center = CGPointMake(point.x,
-            sender.view!.center.y);
-
-        if sender.state == UIGestureRecognizerState.Ended {
-            
-            print(point)
-        }
-        
-        
-    }
+    
     
     
 }
@@ -1654,7 +1663,7 @@ class InitialSetupViewController : UIViewController, UITextFieldDelegate, Webser
         self.labelQuestion.layer.borderColor = UIColor.whiteColor().CGColor
 //        self.labelQuestion.layer.backgroundColor = UIColor(red: 0/255, green: 0/255, blue: 0/255, alpha: 0.4)
         
-        let question = AppModel.sharedInstance.preparedQuestion[self.count] as! QuestionModel
+        let question = AppModel.sharedInstance.questions[self.count] as! QuestionModel
         
         
         self.textAnswer.backgroundColor = UIColor(red: 0/255, green: 0/255, blue: 0/255, alpha: 0.4)
@@ -1752,12 +1761,12 @@ class InitialSetupViewController : UIViewController, UITextFieldDelegate, Webser
     // MARK: Method
     func addQuestion() {
         
-        let questionCurrent = AppModel.sharedInstance.preparedQuestion[self.count] as! QuestionModel
+        let questionCurrent = AppModel.sharedInstance.questions[self.count] as! QuestionModel
         questionCurrent.answer = self.textAnswer.text!
         
-        AppModel.sharedInstance.preparedQuestion!.replaceObjectAtIndex(self.count, withObject: questionCurrent)
+        AppModel.sharedInstance.preparedQuestion.addObject(questionCurrent)
         
-        if self.count != AppModel.sharedInstance.preparedQuestion.count - 1 {
+        if self.count != AppModel.sharedInstance.questions.count - 1 {
             self.animateUserInterface()
             return
         }
@@ -1795,13 +1804,12 @@ class InitialSetupViewController : UIViewController, UITextFieldDelegate, Webser
     }
     
     func animateUserInterface() {
+//        
+//        let questionCurrent = AppModel.sharedInstance.questions[self.count] as! QuestionModel
+//        questionCurrent.answer = self.textAnswer.text!
         
-        let questionCurrent = AppModel.sharedInstance.preparedQuestion[self.count] as! QuestionModel
-        questionCurrent.answer = self.textAnswer.text!
-        
-        AppModel.sharedInstance.preparedQuestion.replaceObjectAtIndex(self.count, withObject: questionCurrent)
         self.count++
-        let questionNext = AppModel.sharedInstance.preparedQuestion[self.count] as! QuestionModel
+        let questionNext = AppModel.sharedInstance.questions[self.count] as! QuestionModel
         
         UIView.animateWithDuration(0.3, animations: {
             
@@ -2324,7 +2332,7 @@ class ProfileViewController : UIViewController{
 }
 
 // MARK: - Challenge
-class ChallengeViewController : UIViewController {
+class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     
     // MARK: Prorperties
     @IBOutlet weak var imgQuestion: UIImageView!
@@ -2336,9 +2344,9 @@ class ChallengeViewController : UIViewController {
     @IBOutlet weak var button3: UIButton!
     @IBOutlet weak var button4: UIButton!
     
+    var challenge: ChallengeModel?
     var questions: QuestionCollectionModel?
     var counter: Int!
-    
     
 
     // MARK: View Life Cycle
@@ -2372,21 +2380,41 @@ class ChallengeViewController : UIViewController {
         
         
         
-        
     }
     
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
         
-        let question = self.questions?.collection[self.counter] as! QuestionModel
+        self.getFriends()
+    
+    }
+    
+    // MARK: Method
+    func setupView() {
+        
+        
+        let question = self.challenge!.questionSet.collection[0] as! QuestionModel
+        
         self.labelQuestion.text = question.question
         self.button1.setTitle(question.answer, forState: UIControlState.Normal)
         self.button2.setTitle(question.options[0] as? String, forState: UIControlState.Normal)
         self.button3.setTitle(question.options[1] as? String, forState: UIControlState.Normal)
         self.button4.setTitle(question.options[2] as? String, forState: UIControlState.Normal)
+        
     }
     
-    // MARK: Method
+    func getFriends() {
+        
+        let dictionaryParam = NSMutableDictionary()
+        dictionaryParam.setObject(challenge!.identifier, forKey: "uid")
+        let webservice = WebserviceClass()
+        webservice.link = kWebLink + kQSet
+        webservice.identifier = "getFriends"
+        webservice.delegate = self
+        webservice.getMethod(dictionaryParam)
+        
+    }
+    
     func answer(selected: Int) {
         self.counter = self.counter + 1
         
@@ -2400,7 +2428,7 @@ class ChallengeViewController : UIViewController {
                 self.viewHolder.frame = CGRectMake(-self.viewHolder.frame.size.width, self.viewHolder.frame.origin.y, self.viewHolder.frame.size.width, self.viewHolder.frame.size.height)
                 
                 }, completion: { (finish: Bool) in
-                    let question = self.questions?.collection[self.counter] as! QuestionModel
+                    let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
                     self.labelQuestion.text = question.question
                     self.button1.setTitle(question.answer, forState: UIControlState.Normal)
                     self.button2.setTitle(question.options[0] as? String, forState: UIControlState.Normal)
@@ -2630,5 +2658,59 @@ class ChallengeViewController : UIViewController {
                 
         })
     }
+    
+    //MARK: Delegate
+    func webserviceDidReceiveData(webservice: WebserviceClass, content: NSDictionary) {
+        
+        let returnQuestions = content["questions"] as! NSArray
+        
+        let predicatePrepared = NSPredicate(format: "self.type == 'prepared'")
+        let predicateCustom = NSPredicate(format: "self.type == 'custom'")
+        
+        let questionPrepared = returnQuestions.filteredArrayUsingPredicate(predicatePrepared) as NSArray
+        let questionCustom = returnQuestions.filteredArrayUsingPredicate(predicateCustom) as NSArray
+        
+        
+        for objectPrepared in questionPrepared {
+            let dictionaryPrepared = objectPrepared as! NSDictionary
+            let key = dictionaryPrepared["qid"] as! String
+            let predicate = NSPredicate(format: "self.identifier == '\(key)'")
+            let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
+            if arrayFilter.count != 0 {
+                let model = arrayFilter[0] as! QuestionModel
+                let newQuestion = QuestionModel()
+                newQuestion.identifier = model.identifier
+                newQuestion.type = model.type
+                newQuestion.answer = model.answer
+                newQuestion.question = model.question
+                print(model.options)
+                newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
+                self.challenge!.questionSet.collection.addObject(newQuestion)
+                
+                print("Tang ina Add mo!\(self.challenge!.questionSet.collection)")
+            }
+        }
+        
+        for objectCustom in questionCustom {
+            let dictionaryCustom = objectCustom as! NSDictionary
+            let key = dictionaryCustom["qid"] as! String
+            let predicate = NSPredicate(format: "self.identifier == '\(key)'")
+            let arrayFilter = AppModel.sharedInstance.customQuestion.filteredArrayUsingPredicate(predicate) as NSArray
+            if arrayFilter.count != 0 {
+                let model = arrayFilter[0] as! QuestionModel
+                let newQuestion = QuestionModel()
+                newQuestion.identifier = model.identifier
+                newQuestion.type = model.type
+                newQuestion.answer = model.answer
+                newQuestion.question = model.question
+                newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
+                self.challenge!.questionSet.collection.addObject(newQuestion)
+            }
+        }
+        self.setupView()
+        
+        
+    }
+    
     
 }

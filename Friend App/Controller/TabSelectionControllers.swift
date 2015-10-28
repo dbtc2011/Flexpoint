@@ -610,7 +610,7 @@ class ChallengeSetupViewController : UIViewController, QuestionSelectionViewCont
 }
 
 // MARK: - Activity Controller
-class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, NotificationViewDelegate {
+class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, NotificationViewDelegate, WebserviceClassDelegate {
     
     // MARK: Properties
     @IBOutlet weak var viewProfile: UIView!
@@ -623,27 +623,12 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
     
     var notifView: NotificationView?
     
-    var currentUser: UserModel?
-    
     // MARK: View Life cycle
     override func viewDidLoad() {
         
-        var pointY = 0 as CGFloat
         
-        for (var count = 0; count < AppModel.sharedInstance.challengeSent.count; count++) {
-            
-            let challenge = ChallengeStatusView(frame: CGRectMake(0, pointY, self.view.frame.size.width-20, 80))
-            challenge.setupView()
-            challenge.delegate = self
-            self.scrollActivity.addSubview(challenge)
-            
-            pointY = pointY + 90
-            
-        }
         
         self.scrollActivity.pagingEnabled = true
-        self.scrollActivity.contentSize = CGSizeMake(self.view.frame.size.width-20, pointY)
-        
         self.viewProfile.layer.borderColor = UIColor.whiteColor().CGColor
         self.viewProfile.layer.borderWidth = 2.0
         self.viewProfile.layer.cornerRadius = 10
@@ -662,6 +647,7 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
     
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
+        self.getData()
     }
     
     // MARK: Button Actions
@@ -671,12 +657,52 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
         
     }
     
+    // MARK: Method
+    func setupView() {
+        
+        for views in self.scrollActivity.subviews {
+            views.removeFromSuperview()
+        }
+        
+        var pointY = 0 as CGFloat
+        
+        for (var count = 0; count < AppModel.sharedInstance.challengeSent.count; count++) {
+            
+            let challenge = ChallengeStatusView(frame: CGRectMake(0, pointY, self.view.frame.size.width-20, 80))
+            challenge.user = (AppModel.sharedInstance.challengeSent[count] as! ChallengeModel).friend
+            challenge.setupView()
+            challenge.delegate = self
+            self.scrollActivity.addSubview(challenge)
+            
+            pointY = pointY + 90
+            
+        }
+        self.buttonNotification.hidden = false
+        self.buttonNotification.setTitle("\(AppModel.sharedInstance.challengeReceived.count)", forState: UIControlState.Normal)
+        if AppModel.sharedInstance.challengeReceived.count == 0 {
+            self.buttonNotification.hidden = true
+            
+        }
+        self.scrollActivity.contentSize = CGSizeMake(self.view.frame.size.width-20, pointY)
+    }
+    func getData() {
+        
+        let dictionaryParam = NSMutableDictionary()
+        
+        dictionaryParam.setObject(AppModel.sharedInstance.user.identifier, forKey: "userId")
+        
+        let webservice = WebserviceClass()
+        webservice.link = kWebLink + kChallenges
+        webservice.identifier = "getData"
+        webservice.delegate = self
+        webservice.getMethod(dictionaryParam)
+    }
     func menuNotification() {
         
         let arrayNames = ["Mark Angeles", "Nestor Alveyra", "Vince Espanola", "Kenneth Froyalde", "Paul Gallaso", "Mark Angeles", "Nestor Alveyra", "Vince Espanola", "Kenneth Froyalde", "Paul Gallaso","Mark Angeles", "Nestor Alveyra", "Vince Espanola", "Kenneth Froyalde", "Paul Gallaso","Mark Angeles", "Nestor Alveyra", "Vince Espanola", "Kenneth Froyalde", "Paul Gallaso"] as NSArray
         
         let arrayNotif = NSMutableArray()
-        for (var count = 0; count < arrayNames.count; count++) {
+        for (var count = 0; count < AppModel.sharedInstance.challengeReceived.count; count++) {
             
             let questionCollection = QuestionCollectionModel()
             questionCollection.identifier = arrayNames[count] as! String
@@ -731,10 +757,89 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
         self.performSegueWithIdentifier("goToQAPreview", sender: self)
     }
     
-    func notificationSelected(selected: QuestionCollectionModel) {
+    func notificationSelected(selected: ChallengeModel) {
         
         self.notifView?.removeFromSuperview()
         self.performSegueWithIdentifier("goToChallenge", sender: selected)
+    }
+    
+    // Webservice
+    func webserviceDidReceiveData(webservice: WebserviceClass, content: NSDictionary) {
+        
+        if webservice.identifier == "getData" {
+            
+            AppModel.sharedInstance.challengeSent.removeAllObjects()
+            AppModel.sharedInstance.challengeReceived.removeAllObjects()
+            
+            let dictionarySets = content["sets"] as! NSDictionary
+            let arrayIncoming = dictionarySets["incoming"] as! NSArray
+            let arrayOutging = dictionarySets["outgoing"] as! NSArray
+            
+            for objectIncoming in arrayIncoming {
+                
+                let dictionaryIn = objectIncoming as! NSDictionary
+                
+                let sender = dictionaryIn["sender"] as! String
+                let predicate = NSPredicate(format: "self.identifier == '\(sender)'")
+                let selectedFriend = AppModel.sharedInstance.friends.filteredArrayUsingPredicate(predicate) as NSArray
+                
+                if selectedFriend.count != 0 {
+                    
+                    let challenge = ChallengeModel()
+                    challenge.identifier = dictionaryIn["sid"] as! String
+                    
+                    let model = selectedFriend[0] as! UserModel
+                    challenge.friend.identifier = model.identifier
+                    challenge.friend.facebookID = model.facebookID
+                    challenge.friend.firstName = model.firstName
+                    challenge.friend.lastName = model.lastName
+                    challenge.friend.email = model.email
+                    challenge.friend.emailType = model.emailType
+                    challenge.type = "in"
+                    AppModel.sharedInstance.challengeReceived.addObject(challenge)
+                    
+                }
+                
+                
+            }
+            
+            for objectOutgoing in arrayOutging {
+                
+                let dinctionaryOut = objectOutgoing as! NSDictionary
+                
+                
+                let friends = dinctionaryOut["receivers"] as! NSArray
+                
+                for objectFriend in friends {
+                    let dictionaryFriend = objectFriend as! NSDictionary
+                    let fbid = dictionaryFriend["rid"] as! String
+                    let predicate = NSPredicate(format: "self.identifier == '\(fbid)'")
+                    let selectedFriend = AppModel.sharedInstance.friends.filteredArrayUsingPredicate(predicate) as NSArray
+                    
+                    if selectedFriend.count != 0 {
+                        
+                        let challenge = ChallengeModel()
+                        challenge.identifier = dinctionaryOut["sid"] as! String
+                        
+                        let model = selectedFriend[0] as! UserModel
+                        challenge.friend.identifier = model.identifier
+                        challenge.friend.facebookID = model.facebookID
+                        challenge.friend.firstName = model.firstName
+                        challenge.friend.lastName = model.lastName
+                        challenge.friend.email = model.email
+                        challenge.friend.emailType = model.emailType
+                        challenge.type = "out"
+                        AppModel.sharedInstance.challengeSent.addObject(challenge)
+     
+                    }
+                }
+                
+            }
+        }
+        
+        print(AppModel.sharedInstance.challengeSent)
+        self.setupView()
+        
     }
     
     // MARK: Segue
@@ -782,7 +887,7 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
         }else if segue.identifier == "goToChallenge" {
             
             let controller = segue.destinationViewController as! ChallengeViewController
-            controller.questions = sender as? QuestionCollectionModel
+            controller.challenge = sender as? ChallengeModel
         }
     }
 }
