@@ -23,6 +23,7 @@
 #define kSendChallenge @"/friendapp/api/ios/stats-game"
 #define kChallenges @"/friendapp/api/ios/stats-game/quiz-sets/"
 #define kQSet @"/friendapp/api/ios/stats-game/quiz-set/"
+#define kSendAnswer @"/friendapp/api/ios/stats-game/statistics/"
 #define kFBAppLink @"https://fb.me/750184568442914"
 
 

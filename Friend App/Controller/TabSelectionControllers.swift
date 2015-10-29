@@ -777,6 +777,8 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
             
             for objectIncoming in arrayIncoming {
                 
+                
+                
                 let dictionaryIn = objectIncoming as! NSDictionary
                 
                 let sender = dictionaryIn["sender"] as! String
@@ -787,7 +789,7 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
                     
                     let challenge = ChallengeModel()
                     challenge.identifier = dictionaryIn["sid"] as! String
-                    
+                    challenge.stats = dictionaryIn["stats_id"] as! String
                     let model = selectedFriend[0] as! UserModel
                     challenge.friend.identifier = model.identifier
                     challenge.friend.facebookID = model.facebookID
@@ -820,7 +822,7 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
                         
                         let challenge = ChallengeModel()
                         challenge.identifier = dinctionaryOut["sid"] as! String
-                        
+                        challenge.stats = dinctionaryOut["stats_id"] as! String
                         let model = selectedFriend[0] as! UserModel
                         challenge.friend.identifier = model.identifier
                         challenge.friend.facebookID = model.facebookID
@@ -960,14 +962,13 @@ class LadderBoardViewController : UIViewController {
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
         
+        
     }
     
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
         
     }
-    
-    
     
     
     

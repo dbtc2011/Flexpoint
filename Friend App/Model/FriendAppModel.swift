@@ -48,6 +48,8 @@ class QuestionModel: NSObject {
     var question: String! = ""
     var answer: String! = ""
     var type: String! = ""
+    var selectedAnswer: String! = ""
+    var result: String! = ""
     var options: NSMutableArray! = NSMutableArray()
     
 }
@@ -81,6 +83,7 @@ class ChallengeModel: NSObject {
     
     var identifier: String! = ""
     var type: String! = ""
+    var stats: String! = ""
     var questionSet: QuestionCollectionModel! = QuestionCollectionModel()
     var friend: UserModel! = UserModel()
 }

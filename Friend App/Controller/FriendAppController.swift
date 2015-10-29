@@ -118,7 +118,7 @@ class LoginViewController : UIViewController, WebserviceClassDelegate, FBSDKLogi
 */
 
     }
-    
+
 
     // MARK: Method
     func getQuestions() {
@@ -2406,28 +2406,108 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     func getFriends() {
         
         let dictionaryParam = NSMutableDictionary()
-        dictionaryParam.setObject(challenge!.identifier, forKey: "uid")
+        var parameter = "?setId=[quiz]&senderId=[user]"
+        parameter = parameter.stringByReplacingOccurrencesOfString("[quiz]", withString: challenge!.identifier)
+        parameter = parameter.stringByReplacingOccurrencesOfString("[user]", withString: challenge!.friend.identifier)
+        dictionaryParam.setObject(parameter, forKey: "uid")
         let webservice = WebserviceClass()
         webservice.link = kWebLink + kQSet
-        webservice.identifier = "getFriends"
+        webservice.identifier = "getQuestions"
         webservice.delegate = self
         webservice.getMethod(dictionaryParam)
         
+        
+        
     }
     
-    func answer(selected: Int) {
+    func setContents() {
+        
+        let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
+        let temporaryArray = NSMutableArray()
+        temporaryArray.addObjectsFromArray(question.options as [AnyObject])
+        if !temporaryArray.containsObject(question.answer) {
+            temporaryArray.removeLastObject()
+            temporaryArray.addObject(question.answer)
+        }
+        if question.type == "custom" {
+            temporaryArray.addObject(question.answer)
+        }
+        
+        self.labelQuestion.text = question.question
+        print("Correct Answer = \(question.answer)")
+        
+        var random = Int(arc4random_uniform(UInt32(temporaryArray.count)))
+        self.button1.setTitle(temporaryArray[random] as? String, forState: UIControlState.Normal)
+        temporaryArray.removeObjectAtIndex(random)
+        
+        random = Int(arc4random_uniform(UInt32(temporaryArray.count)))
+        self.button2.setTitle(temporaryArray[random] as? String, forState: UIControlState.Normal)
+        temporaryArray.removeObjectAtIndex(random)
+        
+        random = Int(arc4random_uniform(UInt32(temporaryArray.count)))
+        self.button3.setTitle(temporaryArray[random] as? String, forState: UIControlState.Normal)
+        temporaryArray.removeObjectAtIndex(random)
+        
+        random = Int(arc4random_uniform(UInt32(temporaryArray.count)))
+        self.button4.setTitle(temporaryArray[random] as? String, forState: UIControlState.Normal)
+        temporaryArray.removeObjectAtIndex(random)
+        
+        
+        
+    }
+    
+    func sendAnswer() {
+        
+        let dictionaryParameter = NSMutableDictionary()
+        dictionaryParameter.setObject(self.challenge!.stats, forKey: "stats_id")
+        dictionaryParameter.setObject(self.challenge!.friend.identifier, forKey: "rid")
+        dictionaryParameter.setObject("1", forKey: "status")
+        
+        let results  = NSMutableArray()
+        for  objectChallenge in  self.challenge!.questionSet.collection{
+            let challengeRep = objectChallenge as! QuestionModel
+            let dictionaryQuestion = NSMutableDictionary()
+            
+            dictionaryQuestion.setObject(challengeRep.identifier, forKey: "qid")
+            dictionaryQuestion.setObject(challengeRep.selectedAnswer, forKey: "answer")
+            dictionaryQuestion.setObject(challengeRep.result, forKey: "correct")
+            results.addObject(dictionaryQuestion)
+            
+        }
+        let powerups = NSMutableDictionary()
+        powerups.setObject([], forKey: "bombs")
+        powerups.setObject([], forKey: "change")
+        dictionaryParameter.setObject(results, forKey: "results")
+        dictionaryParameter.setObject(powerups, forKey: "powerups")
+        
+        print("PARAMETER = \(dictionaryParameter)")
+        let webservice = WebserviceClass()
+        webservice.link = "\(kWebLink)\(kSendAnswer)\(self.challenge!.stats)"
+        webservice.identifier = "patchData"
+        webservice.delegate = self
+        webservice.sendPatchWithParameter(dictionaryParameter)
+        
+    }
+    
+    func answer(selected: String) {
+        
+        let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
+        question.selectedAnswer = selected
+        question.result = "false"
+        if question.answer == selected {
+            question.result = "true"
+        }
         self.counter = self.counter + 1
         
         if self.counter == 5 {
-            self.dismissViewControllerAnimated(true, completion: {
-                
-            })
+            self.sendAnswer()
         }else {
             UIView.animateWithDuration(0.2, animations: {
                 
                 self.viewHolder.frame = CGRectMake(-self.viewHolder.frame.size.width, self.viewHolder.frame.origin.y, self.viewHolder.frame.size.width, self.viewHolder.frame.size.height)
                 
                 }, completion: { (finish: Bool) in
+                    /*&
                     let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
                     self.labelQuestion.text = question.question
                     self.button1.setTitle(question.answer, forState: UIControlState.Normal)
@@ -2435,6 +2515,9 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                     self.button3.setTitle(question.options[1] as? String, forState: UIControlState.Normal)
                     self.button4.setTitle(question.options[2] as? String, forState: UIControlState.Normal)
                     self.viewHolder.frame = CGRectMake(self.viewHolder.frame.size.width, self.viewHolder.frame.origin.y, self.viewHolder.frame.size.width, self.viewHolder.frame.size.height)
+                    
+*/
+                    self.setContents()
                     UIView.animateWithDuration(0.2, animations: {
                         self.viewHolder.frame = CGRectMake(0, self.viewHolder.frame.origin.y, self.viewHolder.frame.size.width, self.viewHolder.frame.size.height)
                         }, completion: { (finish: Bool) in
@@ -2488,7 +2571,7 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                                                     
                                                     }, completion: { (finish: Bool) in
                                                         
-                                                        self.answer(1)
+                                                        self.answer(sender.titleLabel!.text!)
                                                         
                                                 })
                                         })
@@ -2540,8 +2623,8 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                                                     
                                                     }, completion: { (finish: Bool) in
                                                         
-                                                        
-                                                        self.answer(2)
+                                                    
+                                                        self.answer(sender.titleLabel!.text!)
                                                         
                                                 })
                                         })
@@ -2593,8 +2676,8 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                                                     
                                                     }, completion: { (finish: Bool) in
                                                         
-                                                        
-                                                        self.answer(3)
+                                        
+                                                        self.answer(sender.titleLabel!.text!)
                                                         
                                                 })
                                         })
@@ -2647,7 +2730,8 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                                                     }, completion: { (finish: Bool) in
                                                         
                                                         
-                                                        self.answer(4)
+                                                        
+                                                        self.answer(sender.titleLabel!.text!)
                                                         
                                                 })
                                         })
@@ -2662,52 +2746,54 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     //MARK: Delegate
     func webserviceDidReceiveData(webservice: WebserviceClass, content: NSDictionary) {
         
-        let returnQuestions = content["questions"] as! NSArray
-        
-        let predicatePrepared = NSPredicate(format: "self.type == 'prepared'")
-        let predicateCustom = NSPredicate(format: "self.type == 'custom'")
-        
-        let questionPrepared = returnQuestions.filteredArrayUsingPredicate(predicatePrepared) as NSArray
-        let questionCustom = returnQuestions.filteredArrayUsingPredicate(predicateCustom) as NSArray
-        
-        
-        for objectPrepared in questionPrepared {
-            let dictionaryPrepared = objectPrepared as! NSDictionary
-            let key = dictionaryPrepared["qid"] as! String
-            let predicate = NSPredicate(format: "self.identifier == '\(key)'")
-            let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
-            if arrayFilter.count != 0 {
-                let model = arrayFilter[0] as! QuestionModel
+        if webservice.identifier == "getQuestions" {
+            let returnQuestions = content["questions"] as! NSArray
+            
+            let predicatePrepared = NSPredicate(format: "self.type == 'prepared'")
+            let predicateCustom = NSPredicate(format: "self.type == 'custom'")
+            
+            let questionPrepared = returnQuestions.filteredArrayUsingPredicate(predicatePrepared) as NSArray
+            let questionCustom = returnQuestions.filteredArrayUsingPredicate(predicateCustom) as NSArray
+            
+            
+            for objectPrepared in questionPrepared {
+                let dictionaryPrepared = objectPrepared as! NSDictionary
+                let key = dictionaryPrepared["qid"] as! String
+                let predicate = NSPredicate(format: "self.identifier == '\(key)'")
+                let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
+                if arrayFilter.count != 0 {
+                    let model = arrayFilter[0] as! QuestionModel
+                    let newQuestion = QuestionModel()
+                    newQuestion.identifier = model.identifier
+                    newQuestion.type = model.type
+                    newQuestion.answer = dictionaryPrepared["answer"] as! String
+                    newQuestion.question = model.question
+                    print(model.options)
+                    newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
+                    self.challenge!.questionSet.collection.addObject(newQuestion)
+                    
+                    print("Tang ina Add mo!\(self.challenge!.questionSet.collection)")
+                }
+            }
+            
+            for objectCustom in questionCustom {
+                let dictionaryCustom = objectCustom as! NSDictionary
                 let newQuestion = QuestionModel()
-                newQuestion.identifier = model.identifier
-                newQuestion.type = model.type
-                newQuestion.answer = model.answer
-                newQuestion.question = model.question
-                print(model.options)
-                newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
+                newQuestion.identifier = dictionaryCustom["qid"] as! String
+                newQuestion.type = "custom"
+                newQuestion.answer = dictionaryCustom["answer"] as! String
+                newQuestion.question = dictionaryCustom["question"] as! String
+                newQuestion.options.addObjectsFromArray(dictionaryCustom["options"] as! NSArray as [AnyObject])
                 self.challenge!.questionSet.collection.addObject(newQuestion)
+            }
+            self.setupView()
+        }else {
+            self.dismissViewControllerAnimated(true, completion: {
                 
-                print("Tang ina Add mo!\(self.challenge!.questionSet.collection)")
-            }
+            })
         }
         
-        for objectCustom in questionCustom {
-            let dictionaryCustom = objectCustom as! NSDictionary
-            let key = dictionaryCustom["qid"] as! String
-            let predicate = NSPredicate(format: "self.identifier == '\(key)'")
-            let arrayFilter = AppModel.sharedInstance.customQuestion.filteredArrayUsingPredicate(predicate) as NSArray
-            if arrayFilter.count != 0 {
-                let model = arrayFilter[0] as! QuestionModel
-                let newQuestion = QuestionModel()
-                newQuestion.identifier = model.identifier
-                newQuestion.type = model.type
-                newQuestion.answer = model.answer
-                newQuestion.question = model.question
-                newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
-                self.challenge!.questionSet.collection.addObject(newQuestion)
-            }
-        }
-        self.setupView()
+        
         
         
     }
