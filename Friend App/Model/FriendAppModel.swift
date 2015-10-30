@@ -84,6 +84,7 @@ class ChallengeModel: NSObject {
     var identifier: String! = ""
     var type: String! = ""
     var stats: String! = ""
+    var status: String! = ""
     var questionSet: QuestionCollectionModel! = QuestionCollectionModel()
     var friend: UserModel! = UserModel()
 }

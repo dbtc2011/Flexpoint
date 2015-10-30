@@ -777,8 +777,6 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
             
             for objectIncoming in arrayIncoming {
                 
-                
-                
                 let dictionaryIn = objectIncoming as! NSDictionary
                 
                 let sender = dictionaryIn["sender"] as! String
@@ -798,6 +796,7 @@ class ActivityViewController : UIViewController, ChallengeStatusViewDelegate, No
                     challenge.friend.email = model.email
                     challenge.friend.emailType = model.emailType
                     challenge.type = "in"
+    
                     AppModel.sharedInstance.challengeReceived.addObject(challenge)
                     
                 }

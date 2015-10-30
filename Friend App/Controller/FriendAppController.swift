@@ -832,6 +832,7 @@ class FriendSelectionViewController : UIViewController, WebserviceClassDelegate 
     var arrayFriends: NSMutableArray?
     
     
+    
     @IBOutlet weak var buttonConfirm: UIButton!
     // MARK: View Life Cycle
     override func viewDidLoad() {
@@ -2337,6 +2338,11 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     // MARK: Prorperties
     @IBOutlet weak var imgQuestion: UIImageView!
     @IBOutlet weak var labelQuestion: UILabel!
+    @IBOutlet weak var viewPowerups: UIView!
+    @IBOutlet weak var buttonBomb: UIButton!
+    @IBOutlet weak var buttonShow: UIButton!
+    @IBOutlet weak var buttonChange: UIButton!
+    @IBOutlet weak var buttonPower: UIButton!
     
     @IBOutlet weak var viewHolder: UIView!
     @IBOutlet weak var button1: UIButton!
@@ -2347,10 +2353,21 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     var challenge: ChallengeModel?
     var questions: QuestionCollectionModel?
     var counter: Int!
+    var reservedQuestion: NSMutableArray!
+    var powerupsUsed: NSMutableDictionary!
     
 
     // MARK: View Life Cycle
     override func viewDidLoad() {
+        self.reservedQuestion = NSMutableArray()
+        self.powerupsUsed = NSMutableDictionary()
+        let bobms = NSMutableArray()
+        let show = NSMutableArray()
+        let change = NSMutableArray()
+        self.powerupsUsed.setObject(bobms, forKey: "bombs")
+        self.powerupsUsed.setObject(show, forKey: "show")
+        self.powerupsUsed.setObject(change, forKey: "changed")
+        
         self.counter = 0
         
         self.imgQuestion.layer.borderColor = UIColor.whiteColor().CGColor
@@ -2390,19 +2407,6 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     }
     
     // MARK: Method
-    func setupView() {
-        
-        
-        let question = self.challenge!.questionSet.collection[0] as! QuestionModel
-        
-        self.labelQuestion.text = question.question
-        self.button1.setTitle(question.answer, forState: UIControlState.Normal)
-        self.button2.setTitle(question.options[0] as? String, forState: UIControlState.Normal)
-        self.button3.setTitle(question.options[1] as? String, forState: UIControlState.Normal)
-        self.button4.setTitle(question.options[2] as? String, forState: UIControlState.Normal)
-        
-    }
-    
     func getFriends() {
         
         let dictionaryParam = NSMutableDictionary()
@@ -2415,8 +2419,6 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
         webservice.identifier = "getQuestions"
         webservice.delegate = self
         webservice.getMethod(dictionaryParam)
-        
-        
         
     }
     
@@ -2452,15 +2454,53 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
         self.button4.setTitle(temporaryArray[random] as? String, forState: UIControlState.Normal)
         temporaryArray.removeObjectAtIndex(random)
         
+        self.button1.tag = 1001
+        self.button4.tag = 1001
+        self.button2.tag = 1001
+        self.button3.tag = 1001
         
+        self.button1.alpha = 1
+        self.button4.alpha = 1
+        self.button2.alpha = 1
+        self.button3.alpha = 1
+        
+        if self.button1.titleLabel!.text == question.answer {
+            self.button1.tag = 1003
+            self.button2.tag = 1002
+        }
+        
+        if self.button2.titleLabel!.text == question.answer {
+            self.button2.tag = 1003
+            self.button1.tag = 1002
+        }
+        
+        if self.button3.titleLabel!.text == question.answer {
+            self.button3.tag = 1003
+            self.button4.tag = 1002
+        }
+        
+        if self.button4.titleLabel!.text == question.answer {
+            self.button4.tag = 1003
+            self.button3.tag = 1002
+        }
+        
+        self.buttonBomb.enabled = true
+        self.buttonShow.enabled = true
+        self.buttonChange.enabled = true
+    
         
     }
     
     func sendAnswer() {
         
+    
+        print("PARAMETER = \(self.powerupsUsed)")
+        
         let dictionaryParameter = NSMutableDictionary()
         dictionaryParameter.setObject(self.challenge!.stats, forKey: "stats_id")
-        dictionaryParameter.setObject(self.challenge!.friend.identifier, forKey: "rid")
+        dictionaryParameter.setObject(self.challenge!.identifier, forKey: "set_id")
+        dictionaryParameter.setObject(AppModel.sharedInstance.user.identifier, forKey: "rid")
+        dictionaryParameter.setObject(self.challenge!.friend.identifier, forKey: "sender_id")
         dictionaryParameter.setObject("1", forKey: "status")
         
         let results  = NSMutableArray()
@@ -2474,13 +2514,11 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
             results.addObject(dictionaryQuestion)
             
         }
-        let powerups = NSMutableDictionary()
-        powerups.setObject([], forKey: "bombs")
-        powerups.setObject([], forKey: "change")
         dictionaryParameter.setObject(results, forKey: "results")
-        dictionaryParameter.setObject(powerups, forKey: "powerups")
         
-        print("PARAMETER = \(dictionaryParameter)")
+        
+        dictionaryParameter.setObject(self.powerupsUsed, forKey: "powerups")
+        
         let webservice = WebserviceClass()
         webservice.link = "\(kWebLink)\(kSendAnswer)\(self.challenge!.stats)"
         webservice.identifier = "patchData"
@@ -2531,13 +2569,129 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     }
     
     // MARK: Button Actions
+    
+    @IBAction func powerClicked(sender: UIButton) {
+        
+        sender.enabled = false
+        
+        UIView.animateWithDuration(0.2, animations: {
+            
+            var frame = self.viewPowerups.frame
+            
+            if frame.origin.x == self.view.frame.size.width {
+                frame.origin.x = frame.origin.x - 60
+            }else {
+                frame.origin.x = frame.origin.x + 60
+            }
+            
+            self.viewPowerups.frame = frame
+            }, completion: { (finish: Bool) in
+                
+                sender.enabled = true
+                
+        })
+        
+    }
+    
+    @IBAction func bombClicked(sender: UIButton) {
+        
+        sender.enabled = false
+        
+        
+        let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
+        
+        let array = self.powerupsUsed["bombs"] as! NSMutableArray
+        let dictionary = NSMutableDictionary()
+        dictionary.setObject(question.identifier, forKey: "qid")
+        array.addObject(dictionary)
+        self.powerupsUsed.setObject(array, forKey: "bombs")
+        
+        
+        UIView.animateWithDuration(0.5, animations: {
+            
+            if self.button1.tag == 1001 {
+                self.button1.alpha = 0
+            }
+            if self.button2.tag == 1001 {
+                self.button2.alpha = 0
+            }
+            if self.button3.tag == 1001 {
+                self.button3.alpha = 0
+            }
+            if self.button4.tag == 1001 {
+                self.button4.alpha = 0
+            }
+            
+            }, completion: { (finish : Bool) in
+                
+        })
+        
+        
+      
+        
+        
+        
+    }
+    
+    @IBAction func showClicked(sender: UIButton) {
+        sender.enabled = false
+        
+        let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
+        
+        let array = self.powerupsUsed["show"] as! NSMutableArray
+        let dictionary = NSMutableDictionary()
+        dictionary.setObject(question.identifier, forKey: "qid")
+        array.addObject(dictionary)
+        self.powerupsUsed.setObject(array, forKey: "show")
+        
+        UIView.animateWithDuration(0.5, animations: {
+            
+            if self.button1.tag != 1003 {
+                self.button1.alpha = 0
+            }
+            if self.button2.tag != 1003 {
+                self.button2.alpha = 0
+            }
+            if self.button3.tag != 1003 {
+                self.button3.alpha = 0
+            }
+            if self.button4.tag != 1003 {
+                self.button4.alpha = 0
+            }
+            
+            }, completion: { (finish : Bool) in
+                
+        })
+    }
+    
+    @IBAction func changeClicked(sender: UIButton) {
+        
+        if self.reservedQuestion.count == 0 {
+            return
+        }
+        
+        let question = self.challenge!.questionSet.collection[self.counter] as! QuestionModel
+        let newQuestion = self.reservedQuestion.lastObject as! QuestionModel
+        self.challenge!.questionSet.collection.replaceObjectAtIndex(self.counter, withObject: newQuestion)
+        
+        let array = self.powerupsUsed["changed"] as! NSMutableArray
+        let dictionary = NSMutableDictionary()
+        dictionary.setObject(question.identifier, forKey: "from")
+        dictionary.setObject(newQuestion.identifier, forKey: "to")
+        array.addObject(dictionary)
+        self.powerupsUsed.setObject(array, forKey: "changed")
+        self.reservedQuestion.removeLastObject()
+        self.setContents()
+        
+    }
+    
     @IBAction func button1Clicked(sender: UIButton) {
         var degrees = 5 as Double
         var radians = (degrees / 180.0) * M_PI as Double
         UIView.animateWithDuration(0.1, animations: {
+            
             sender.transform = CGAffineTransformMakeRotation(CGFloat(radians))
-            
-            
+        
             }, completion: { (finish: Bool) in
                 UIView.animateWithDuration(0.2, animations: {
                     degrees = -15
@@ -2746,15 +2900,23 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
     //MARK: Delegate
     func webserviceDidReceiveData(webservice: WebserviceClass, content: NSDictionary) {
         
+        if webservice.statusCode > 203 {
+            // Alert (Something went wrong on the Rest API)
+            return
+        }
+        
         if webservice.identifier == "getQuestions" {
             let returnQuestions = content["questions"] as! NSArray
+            let returnExtra = content["extra"] as! NSDictionary
+            self.reservedQuestion.removeAllObjects()
             
             let predicatePrepared = NSPredicate(format: "self.type == 'prepared'")
             let predicateCustom = NSPredicate(format: "self.type == 'custom'")
             
             let questionPrepared = returnQuestions.filteredArrayUsingPredicate(predicatePrepared) as NSArray
             let questionCustom = returnQuestions.filteredArrayUsingPredicate(predicateCustom) as NSArray
-            
+            let extraPrepared = returnExtra["prepared"] as! NSArray
+            let extraCustom = returnExtra["custom"] as! NSArray
             
             for objectPrepared in questionPrepared {
                 let dictionaryPrepared = objectPrepared as! NSDictionary
@@ -2772,7 +2934,6 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                     newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
                     self.challenge!.questionSet.collection.addObject(newQuestion)
                     
-                    print("Tang ina Add mo!\(self.challenge!.questionSet.collection)")
                 }
             }
             
@@ -2786,7 +2947,39 @@ class ChallengeViewController : UIViewController, WebserviceClassDelegate {
                 newQuestion.options.addObjectsFromArray(dictionaryCustom["options"] as! NSArray as [AnyObject])
                 self.challenge!.questionSet.collection.addObject(newQuestion)
             }
-            self.setupView()
+            
+            for objectPrepared in extraPrepared {
+                let dictionaryPrepared = objectPrepared as! NSDictionary
+                let key = dictionaryPrepared["qid"] as! String
+                let predicate = NSPredicate(format: "self.identifier == '\(key)'")
+                let arrayFilter = AppModel.sharedInstance.preparedQuestion.filteredArrayUsingPredicate(predicate) as NSArray
+                if arrayFilter.count != 0 {
+                    let model = arrayFilter[0] as! QuestionModel
+                    let newQuestion = QuestionModel()
+                    newQuestion.identifier = model.identifier
+                    newQuestion.type = model.type
+                    newQuestion.answer = dictionaryPrepared["answer"] as! String
+                    newQuestion.question = model.question
+                    print(model.options)
+                    newQuestion.options.addObjectsFromArray(model.options as [AnyObject])
+                    self.reservedQuestion.addObject(newQuestion)
+                    
+                }
+            }
+            
+            for objectCustom in extraCustom {
+                let dictionaryCustom = objectCustom as! NSDictionary
+                let newQuestion = QuestionModel()
+                newQuestion.identifier = dictionaryCustom["qid"] as! String
+                newQuestion.type = "custom"
+                newQuestion.answer = dictionaryCustom["answer"] as! String
+                newQuestion.question = dictionaryCustom["question"] as! String
+                newQuestion.options.addObjectsFromArray(dictionaryCustom["options"] as! NSArray as [AnyObject])
+                self.reservedQuestion.addObject(newQuestion)
+            }
+            
+            
+            self.setContents()
         }else {
             self.dismissViewControllerAnimated(true, completion: {
                 
